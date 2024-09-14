@@ -1,13 +1,28 @@
 /*Connectivity*/
+
+//imports for express//
 const express = require('express');
+
+//creates an express app instance//
 const app = express();
+
+//import the database (sql)
 const db = require('./db/dbConfig');
+
+//import the product file
+const productsController = require('./controllers/productsController')
+//sets up MIDDLEWARE to PARSE incoming requests from the front end to the back end.
+//express.json is a built in middleware function that parses incoming requests with 
+//JSON payloads (req.body)
 app.use(express.json());
-
-
-app.use(express.json())
-
+app.use('/products', productsController)
 /*validations*/
+// Purpose: This middleware function is used to validate that a given id parameter in the request URL is valid.
+// Logging: console.log("Testing middleware!"); logs a message to the console whenever this middleware function is called. This is useful for debugging purposes.
+// Extracting id: let id = req.params.id; retrieves the id parameter from the URL of the incoming request. For example, if the request URL is /products/3, req.params.id would be 3.
+// Validation Check: The if statement checks if the id is within a valid range (id >= 0 && id < products.length). Here, products.length represents the total number of products in an array called products. The condition ensures the id is non-negative and less than the total number of products.
+// If the id is valid, next() is called to pass control to the next middleware function or route handler.
+// Error Handling: If the id is not valid, the middleware sends a 404 (Not Found) response with a message indicating that the provided id is invalid.
 function validateId(req, res, next) {
     console.log("Testing middleware!")
 
@@ -18,7 +33,11 @@ function validateId(req, res, next) {
 
     res.status(404).send(`The id, ${id}, you have sent us is invalid!!`)
 }
-
+// Purpose: This middleware function is used to validate that the request body contains all the necessary fields for creating or updating a product.
+// Extracting Request Body: let body = req.body; retrieves the body of the incoming request. The request body is typically in JSON format and contains data sent by the client, such as { "name": "Product A", "price": 100, "brand": "Brand X", "model": "Model Y", "description": "A sample product" }.
+// Validation Check: The if statement checks that all required fields (name, price, brand, model, description) are present in the request body.
+// If all fields are present, next() is called to pass control to the next middleware function or route handler.
+// Error Handling: If any required field is missing, the middleware sends a 400 (Bad Request) response with a message indicating that some information is missing from the request body.
 function validateBody (req, res, next) {
     let body = req.body
 
@@ -53,11 +72,7 @@ let products = [
         description: "Perfect for those who live in an apartment but still want to rock."
     }
 ]
-// CRUD
-// C - create ✅
-// R - read ✅
-// U - update ✅
-// D - destroy ✅
+
 
 /* Controller Use app.use('/example', example) */
 app.get("/", (req, res) => {
@@ -68,66 +83,7 @@ app.get("*", (req, res) => {
     res.send("No such route exists.")
 })
 
-app.get("/products", async (req, res) => {
-    let productsDB = await db.any("SELECT * FROM products")
-    res.status(200).json({success: true, data: productsDB})
-})
 
-/* /products/0, /products/1, /products/2, etc. */
-app.get("/products/:id", validateId, async (req, res) => {
-    console.log("Start of main function body")
-    try {
-        let productId = req.params.id
-        let product = await db.oneOrNone("SELECT * FROM products WHERE id=$1", productId)
-        res.status(200).json({success: true, data: product})
-    } catch(err) {
-        res.status(500).json({success: false, data: err})
-    }
-})
-
-app.post("/products/new", validateBody, async (req, res) => {
-    let body = req.body
-    console.log(req, 'THIS SHOULD BE THE BODY')
-    try {
-        let product = await db.oneOrNone("INSERT INTO products (name, price, brand, model, description, condition) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *", [body.name, body.price, body.brand, body.model, body.description, body.condition])
-        res.status(201).json({success: true, data: product})
-    } catch(err) {
-        res.status(500).json({success: false, data: err})
-    }
-})
-
-app.put("/products/:id", validateId, validateBody, async (req, res) => {
-    console.log("testing start of update route")
-    let id = req.params.id
-    let body = req.body
-
-    try {
-        let updatedProduct = await db.oneOrNone("UPDATE products SET name=$1, price=$2, brand=$3, model=$4, description=$5, condition=$6 WHERE id=$7 RETURNING *", [
-            body.name,
-            body.price,
-            body.brand,
-            body.model,
-            body.description,
-            body.condition, 
-            id
-        ])
-        res.status(201).json({success: true, data: updatedProduct})
-    } catch (err) {
-        res.status(500).json({success: false, data: err})
-    }
-
-})
-
-app.delete("/products/:id", validateId, async (req, res) => {
-    let id = req.params.id
-
-    try {
-        let deletedProduct = await db.oneOrNone("DELETE FROM products WHERE id=$1 RETURNING *", id)
-        res.status(200).json({success: true, data: deletedProduct})
-    } catch (error) {
-        res.status(500).json({success: false, data: err})
-    }
-})
 
 module.exports = app;
 

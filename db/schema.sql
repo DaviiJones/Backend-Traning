@@ -11,5 +11,5 @@ CREATE TABLE products_example (
    brand VARCHAR(15),
    model VARCHAR(15),
    description TEXT, 
-   condition VARCHAR(10) NOT NULL
+   condition VARCHAR(10) NOT NUL
 );
